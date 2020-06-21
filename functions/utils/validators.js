@@ -110,9 +110,11 @@ exports.reduceStockDetails = (stock) => {
   return stockDetails;
 };
 
-//not finished
-exports.validateTradeDetails = (trade) => {
+exports.validateTradeDetails = (trade, buy) => {
   let errors = {};
+  if (!(typeof buy == "boolean")) {
+    errors.buy = "Buy isn't a boolean.";
+  }
   if (!isType(trade.sharesPrice, "number") || trade.sharesPrice <= 0) {
     errors.sharesPrice = trade.sharesPrice;
   }
@@ -146,7 +148,8 @@ exports.reduceUserDetails = (data) => {
 };
 
 exports.validateStockId = (stock) => {
-  db.collection("stocks")
+  return db
+    .collection("stocks")
     .doc(stock.stockId)
     .get()
     .then((doc) => {
@@ -157,36 +160,34 @@ exports.validateStockId = (stock) => {
     .catch((err) => console.error(err));
 };
 
-exports.validateBalance = (buyingUserName, numShares, sharesPrice, res) => {
-  db.collection("users")
+exports.validateBalance = (buyingUserName, numShares, sharesPrice) => {
+  return db
+    .collection("users")
     .doc(buyingUserName)
     .get()
     .then((doc) => {
       if (doc.data().accountBalance < numShares * sharesPrice) {
-        return res.status(400).json({
-          balance: "Buying user doesn't have enough account balance.",
-        });
-      }
+        return Promise.reject("Account balance too low");
+      } else return Promise.resolve();
     })
     .catch((err) => {
-      return res.status(400).status({ error: err.code });
+      return Promise.reject(err.code);
     });
 };
 
-exports.validateSharesOwned = (sellingUserName, stockId, numShares, res) => {
-  db.collection("users")
+exports.validateSharesOwned = (sellingUserName, stockId, numShares) => {
+  return db
+    .collection("users")
     .doc(sellingUserName)
     .collection("ownedStocks")
     .doc(stockId)
     .get()
     .then((doc) => {
       if (!doc.exists || doc.data().numShares < numShares) {
-        return res.status(400).json({
-          balance: "Selling user doesn't have enough shares in account.",
-        });
-      }
+        return Promise.reject("Not enough shares owned");
+      } else return Promise.resolve();
     })
     .catch((err) => {
-      return res.status(400).status({ error: err.code });
+      return Promise.reject(err.code);
     });
 };
