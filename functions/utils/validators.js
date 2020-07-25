@@ -147,14 +147,16 @@ exports.reduceUserDetails = (data) => {
   return userDetails;
 };
 
-exports.validateStockId = (stock) => {
+exports.validateStockId = (trade) => {
   return db
     .collection("stocks")
-    .doc(stock.stockId)
+    .doc(trade.stockId)
     .get()
     .then((doc) => {
       if (!doc.exists) {
         return res.status(400).json({ stockId: "Stock Id doesn't exist" });
+      } else {
+        trade.stockName = doc.data().stockName;
       }
     })
     .catch((err) => console.error(err));
@@ -190,4 +192,12 @@ exports.validateSharesOwned = (sellingUserName, stockId, numShares) => {
     .catch((err) => {
       return Promise.reject(err.code);
     });
+};
+
+exports.validateDifferentAccounts = (buyer, seller) => {
+  if (buyer === seller) {
+    return Promise.reject("Buyer and seller can't be same person");
+  } else {
+    return Promise.resolve();
+  }
 };

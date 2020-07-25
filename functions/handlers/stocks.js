@@ -38,6 +38,22 @@ exports.getStockData = (req, res, next) => {
 exports.returnStockData = (req, res) => {
   return res.status(201).json(req.stockData);
 };
+exports.getStockHistory = (req, res) => {
+  db.doc(`/stocks/${req.params.stockId}`)
+    .collection("stockHistory")
+    .get()
+    .then((data) => {
+      let stockHistory = [];
+      data.forEach((doc) => {
+        stockHistory.push(doc.data());
+      });
+      return res.status(201).json(stockHistory);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(400).json({ general: "Something went wrong" });
+    });
+};
 
 exports.createStock = (req, res) => {
   const { valid, errors } = validateStockDetails(req.body);
@@ -48,6 +64,7 @@ exports.createStock = (req, res) => {
   db.collection("stocks")
     .add(newStock)
     .then((doc) => {
+      db.collection("stocks").doc(doc.id).update({ stockId: doc.id });
       return res
         .status(200)
         .json({ message: `Stock ${doc.id} created successfully!` });

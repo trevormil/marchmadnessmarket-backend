@@ -116,6 +116,55 @@ exports.getUserDetails = (req, res) => {
     });
 };
 
+exports.getUserOwnedStocks = (req, res) => {
+  db.doc(`/users/${req.user.userName}`)
+    .collection("ownedStocks")
+    .get()
+    .then((data) => {
+      let stocks = [];
+      data.forEach((doc) => {
+        stocks.push(doc.data());
+      });
+      return res.status(201).json(stocks);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(404).json({ general: "Something went wrong" });
+    });
+};
+exports.getTransactions = (req, res) => {
+  db.doc(`/users/${req.user.userName}`)
+    .collection("transactionHistory")
+    .get()
+    .then((data) => {
+      let transactions = [];
+      data.forEach((doc) => {
+        transactions.push(doc.data());
+      });
+      return res.status(201).json(transactions);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(404).json({ general: "Something went wrong" });
+    });
+};
+exports.getAccountHistory = (req, res) => {
+  db.doc(`/users/${req.user.userName}`)
+    .collection("accountHistory")
+    .get()
+    .then((data) => {
+      let accountHistory = [];
+      data.forEach((doc) => {
+        accountHistory.push(doc.data());
+      });
+      return res.status(201).json(accountHistory);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(404).json({ general: "Something went wrong" });
+    });
+};
+
 exports.updateUserDetails = (req, res) => {
   /*let userDetails = reduceUserDetails(req.body);
   db.doc(`/users/${req.user.userName}`)

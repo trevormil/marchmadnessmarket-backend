@@ -1,11 +1,14 @@
 const functions = require("firebase-functions");
 const app = require("express")();
+const cors = require("cors");
+app.use(cors());
 
 const {
   getAllStocks,
   createStock,
   getStockData,
   returnStockData,
+  getStockHistory,
 } = require("./handlers/stocks");
 
 const {
@@ -17,6 +20,7 @@ const {
   removeTrade,
   transferShares,
   validateTrade,
+  getAllTradesForStock,
 } = require("./handlers/trades");
 
 const {
@@ -24,6 +28,9 @@ const {
   login,
   updateUserDetails,
   getUserDetails,
+  getUserOwnedStocks,
+  getAccountHistory,
+  getTransactions,
 } = require("./handlers/users");
 const FBAuth = require("./utils/FBAuth");
 const AdminAuth = require("./utils/AdminAuth");
@@ -35,10 +42,12 @@ const AdminAuth = require("./utils/AdminAuth");
 app.get("/stocks", FBAuth, getAllStocks);
 app.get("/stocks/:stockId", FBAuth, getStockData, returnStockData);
 app.post("/stocks", FBAuth, AdminAuth, createStock);
+app.get("/stocks/:stockId/stockHistory", FBAuth, getStockHistory);
 
 //Trades Routes
+app.get("/trades/all/:stockId", FBAuth, getAllTradesForStock);
 app.get("/trades/:tradeId", FBAuth, getTradeData, returnTradeDetails);
-app.post("/trades", FBAuth, createTrade); //add account balance/owned shares here
+app.post("/trades", FBAuth, createTrade);
 app.put(
   "/trades/:tradeId",
   FBAuth,
@@ -54,6 +63,10 @@ app.delete("/trades/:tradeId", FBAuth, removeTrade);
 app.post("/signup", signup);
 app.post("/login", login);
 app.get("/user", FBAuth, getUserDetails); //incomplete
+app.get("/userStocks", FBAuth, getUserOwnedStocks);
+app.get("/transactions", FBAuth, getTransactions);
+app.get("/accountHistory", FBAuth, getAccountHistory);
+
 //app.put("/user", FBAuth, updateUserDetails); //incomplete
 
 //to implement
