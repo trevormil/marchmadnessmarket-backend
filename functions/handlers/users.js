@@ -15,8 +15,10 @@ exports.signup = (req, res) => {
     password: req.body.password,
     confirmPassword: req.body.confirmPassword,
     userName: req.body.userName,
-    createdAt: firestoreRef.Timestamp.now(),
-    accountBalance: 1000000.0,
+    createdAt: firestoreRef.Timestamp.now().toDate().toLocaleDateString(),
+    accountBalance: 500,
+    startPlusDeposits: 500,
+    totalAccountValue: 500,
   };
 
   const { valid, errors } = validateSignUpData(newUser);
@@ -47,16 +49,25 @@ exports.signup = (req, res) => {
       newUser.userId = userId;
       delete newUser.password;
       delete newUser.confirmPassword;
-      return db.doc(`/users/${newUser.userName}`).set(newUser);
+      return db
+        .doc(`/users/${newUser.userName}`)
+        .set(newUser)
+        .then(() => {});
     })
     .then(() => {
-      const userDoc = db.doc(`/users/${newUser.userName}`);
+      const date = firestoreRef.Timestamp.now()
+        .toDate()
+        .toLocaleDateString()
+        .toString();
+      const dateId = date.replace("/", "").replace("/", "");
 
-      userDoc.collection("accountValue").add({
-        accountValue: newUser.accountBalance,
-        dateAndTime: firestoreRef.Timestamp.now(),
-      });
-      userDoc.collection("ownedStocks");
+      db.doc(`/users/${newUser.userName}`)
+        .collection("accountHistory")
+        .doc(dateId)
+        .set({
+          time: date,
+          value: 500,
+        });
     })
     .then(() => {
       return res.status(201).json({ token });
@@ -132,9 +143,70 @@ exports.getUserOwnedStocks = (req, res) => {
       return res.status(404).json({ general: "Something went wrong" });
     });
 };
+
+exports.getUserWatchlist = (req, res) => {
+  db.doc(`/users/${req.user.userName}`)
+    .collection("watchlist")
+    .get()
+    .then((data) => {
+      let stocks = [];
+      data.forEach((doc) => {
+        stocks.push(doc.data());
+      });
+      return res.status(201).json(stocks);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(404).json({ general: "Something went wrong" });
+    });
+};
+
+exports.getLeaderboard = (req, res) => {
+  db.collection("users")
+    .orderBy("totalAccountValue", "desc")
+    .get()
+    .then((data) => {
+      let leaderboardData = [];
+      data.forEach((user) => {
+        let dataDoc = user.data();
+        leaderboardData.push({
+          userName: dataDoc.userName,
+          totalAccountValue: dataDoc.totalAccountValue,
+        });
+      });
+      return res.status(201).json(leaderboardData);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(404).json({ general: "Something went wrong" });
+    });
+};
+
+exports.addToWatchlist = (req, res) => {
+  db.doc(`/users/${req.user.userName}`)
+    .collection("watchlist")
+    .doc(req.params.stockId)
+    .set({
+      stockId: req.params.stockId,
+    })
+    .then(() => {
+      return res.status(200).json({ general: "Success" });
+    });
+};
+
+exports.removeFromWatchlist = (req, res) => {
+  db.doc(`/users/${req.user.userName}`)
+    .collection("watchlist")
+    .doc(req.params.stockId)
+    .delete()
+    .then(() => {
+      return res.status(200).json({ general: "Success" });
+    });
+};
 exports.getTransactions = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("transactionHistory")
+    .orderBy("dateAndTime", "desc")
     .get()
     .then((data) => {
       let transactions = [];
@@ -148,6 +220,7 @@ exports.getTransactions = (req, res) => {
       return res.status(404).json({ general: "Something went wrong" });
     });
 };
+
 exports.getAccountHistory = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("accountHistory")

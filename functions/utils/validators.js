@@ -106,6 +106,7 @@ exports.reduceStockDetails = (stock) => {
     marketCap: stock.price * stock.float,
     dividends: stock.dividends,
     dateCreated: firestoreRef.Timestamp.now(),
+    ipoPrice: stock.ipoPrice,
   };
   return stockDetails;
 };
@@ -156,7 +157,8 @@ exports.validateStockId = (trade) => {
       if (!doc.exists) {
         return res.status(400).json({ stockId: "Stock Id doesn't exist" });
       } else {
-        trade.stockName = doc.data().stockName;
+        let docData = doc.data();
+        trade.stockName = docData.stockName;
       }
     })
     .catch((err) => console.error(err));
@@ -170,7 +172,9 @@ exports.validateBalance = (buyingUserName, numShares, sharesPrice) => {
     .then((doc) => {
       if (doc.data().accountBalance < numShares * sharesPrice) {
         return Promise.reject("Account balance too low");
-      } else return Promise.resolve();
+      } else {
+        return Promise.resolve(doc.data());
+      }
     })
     .catch((err) => {
       return Promise.reject(err.code);
@@ -187,10 +191,12 @@ exports.validateSharesOwned = (sellingUserName, stockId, numShares) => {
     .then((doc) => {
       if (!doc.exists || doc.data().numShares < numShares) {
         return Promise.reject("Not enough shares owned");
-      } else return Promise.resolve();
+      } else {
+        return Promise.resolve(doc.data());
+      }
     })
-    .catch((err) => {
-      return Promise.reject(err.code);
+    .catch(() => {
+      return Promise.reject();
     });
 };
 

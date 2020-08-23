@@ -45,6 +45,28 @@ exports.getAllTradesForStock = (req, res) => {
     });
 };
 
+exports.getAllTradesForUser = (req, res) => {
+  db.collection("trades")
+    .where("completed", "==", false)
+    .get()
+    .then((query) => {
+      let dataArr = [];
+      query.forEach((doc) => {
+        const docData = doc.data();
+        if (
+          docData.buyingUserId === req.user.uid ||
+          docData.sellingUserId === req.user.uid
+        )
+          dataArr.push(docData);
+      });
+      return res.status(201).json(dataArr);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(500).json({ error: err.code });
+    });
+};
+
 exports.returnTradeDetails = (req, res) => {
   if (
     req.tradeData.buyingUserId == req.user.uid ||
@@ -57,10 +79,10 @@ exports.returnTradeDetails = (req, res) => {
     });
 };
 
-exports.createTrade = (req, res) => {
+exports.createTrade = (req, res, next) => {
   let newTrade = {
     stockId: req.body.stockId,
-    dateCreated: firestoreRef.Timestamp.now(),
+    dateCreated: firestoreRef.Timestamp.now().toDate().toLocaleDateString(),
     dateFinalized: null,
     sharesPrice: req.body.sharesPrice,
     sharesTraded: req.body.sharesTraded,
@@ -99,13 +121,18 @@ exports.createTrade = (req, res) => {
         .add(newTrade)
         .then((doc) => {
           db.collection("trades").doc(doc.id).update({ tradeId: doc.id });
+
+          db.collection("stocks")
+            .doc(req.body.stockId)
+            .update({ activeOrder: true });
+
           return res
             .status(200)
-            .json({ message: `Trade ${doc.id} created successfully!` });
+            .send({ general: `Trade ${doc.id} updated successfully!` });
         });
     })
-    .catch(() => {
-      return res.status(400).send(`Error with promises.`);
+    .catch((err) => {
+      return res.status(400).json({ error: "Error validating trade." });
     });
 };
 
@@ -114,7 +141,7 @@ exports.validateTrade = (req, res, next) => {
     return res.status(400).send("Trade already completed");
 
   let updateDetails = {
-    dateFinalized: firestoreRef.Timestamp.now(),
+    dateFinalized: firestoreRef.Timestamp.now().toDate().toLocaleDateString(),
   };
 
   if (req.tradeData.buyingUserId == null) {
@@ -140,15 +167,19 @@ exports.validateTrade = (req, res, next) => {
     validateBalance(
       req.tradeData.buyingUserName,
       req.tradeData.sharesTraded,
-      req.tradeData.sharesPrice
+      req.tradeData.sharesPrice,
+      req.buyingUserInfo
     ),
     validateSharesOwned(
       req.tradeData.sellingUserName,
       req.tradeData.stockId,
-      req.tradeData.numShares
+      req.tradeData.numShares,
+      req.sellerUserInfo
     ),
   ])
-    .then(() => {
+    .then((values) => {
+      req.buyingUserInfo = values[1];
+      req.sellerUserInfo = values[2];
       return next();
     })
     .catch((err) => {
@@ -178,8 +209,8 @@ exports.transferShares = (req, res, next) => {
   let buyerSharesOwned = req.tradeData.sharesTraded;
   let sellerAvgBuyPrice = req.tradeData.sharesPrice;
   let sellerSharesOwned = req.tradeData.sharesTraded;
-  let buyerAccountBalance;
-  let sellerAccountBalance;
+  let buyerAccountBalance = req.buyingUserInfo.accountBalance;
+  let sellerAccountBalance = req.sellerUserInfo.accountBalance;
   const costOfTrade = req.tradeData.sharesTraded * req.tradeData.sharesPrice;
   const sharesTraded = Number(req.tradeData.sharesTraded);
 
@@ -226,25 +257,10 @@ exports.transferShares = (req, res, next) => {
           sellerSharesOwned = doc.data().numShares;
         }
       }),
-    sellingUserDoc.get().then((doc) => {
-      if (doc.exists) {
-        sellerAccountBalance = doc.data().accountBalance;
-      }
-    }),
-    buyingUserDoc.get().then((doc) => {
-      if (doc.exists) {
-        buyerAccountBalance = doc.data().accountBalance;
-      }
-    }),
   ]).then(() => {
     Promise.all([
       buyingUserDoc.update({
         accountBalance: firestoreRef.FieldValue.increment(costOfTrade * -1),
-      }),
-
-      buyingUserDoc.collection("accountHistory").add({
-        value: buyerAccountBalance - costOfTrade,
-        time: firestoreRef.Timestamp.now(),
       }),
 
       buyingUserDoc.collection("transactionHistory").add({
@@ -253,7 +269,7 @@ exports.transferShares = (req, res, next) => {
         transactionValue: costOfTrade * -1,
         sharesTraded: req.tradeData.sharesTraded,
         sharesPrice: req.tradeData.sharesPrice,
-        dateAndTime: firestoreRef.Timestamp.now(),
+        dateAndTime: firestoreRef.Timestamp.now().toDate().toLocaleDateString(),
       }),
 
       buyingUserDoc
@@ -285,17 +301,16 @@ exports.transferShares = (req, res, next) => {
           sellingUserDoc.update({
             accountBalance: firestoreRef.FieldValue.increment(costOfTrade),
           }),
-          sellingUserDoc.collection("accountHistory").add({
-            value: sellerAccountBalance + costOfTrade,
-            time: firestoreRef.Timestamp.now(),
-          }),
+
           sellingUserDoc.collection("transactionHistory").add({
             tradeId: req.params.tradeId,
             stockName: req.tradeData.stockName,
             transactionValue: costOfTrade,
             sharesTraded: req.tradeData.sharesTraded,
             sharesPrice: req.tradeData.sharesPrice,
-            dateAndTime: firestoreRef.Timestamp.now(),
+            dateAndTime: firestoreRef.Timestamp.now()
+              .toDate()
+              .toLocaleDateString(),
           }),
           setSellerDoc(),
         ]);
@@ -304,7 +319,6 @@ exports.transferShares = (req, res, next) => {
         return next();
       })
       .catch((err) => {
-        console.error(err);
         return res
           .status(500)
           .json({ error: "Something wrong with the transferring" });
@@ -313,56 +327,122 @@ exports.transferShares = (req, res, next) => {
 };
 
 exports.updateStockDetails = (req, res) => {
-  db.collection("stocks")
-    .doc(req.tradeData.stockId)
-    .update({
-      price: req.tradeData.sharesPrice,
-      volume: firestoreRef.FieldValue.increment(req.tradeData.sharesTraded),
+  let availableTrade = false;
+  db.collection("trades")
+    .where("stockId", "==", req.tradeData.stockId)
+    .get()
+    .then((query) => {
+      query.forEach((trade) => {
+        if (trade.data().completed === false) {
+          availableTrade = true;
+        }
+      });
     })
     .then(() => {
       db.collection("stocks")
         .doc(req.tradeData.stockId)
-        .collection("stockHistory")
-        .add({
-          value: req.tradeData.sharesPrice,
-          time: firestoreRef.Timestamp.now(),
+        .get()
+        .then((stock) => {
+          let high = stock.data().high,
+            low = stock.data().low,
+            open = stock.data().open,
+            ipoPrice = stock.data().ipoPrice;
+          if (req.tradeData.sharesPrice > high) {
+            high = req.tradeData.sharesPrice;
+          } else if (req.tradeData.sharesPrice < low) {
+            low = req.tradeData.sharesPrice;
+          }
+          const date = firestoreRef.Timestamp.now()
+            .toDate()
+            .toLocaleDateString()
+            .toString();
+          const dateId = date.replace("/", "").replace("/", "");
+          Promise.all([
+            db
+              .collection("stocks")
+              .doc(req.tradeData.stockId)
+              .update({
+                price: req.tradeData.sharesPrice,
+                volume: firestoreRef.FieldValue.increment(
+                  req.tradeData.sharesTraded
+                ),
+                high: high,
+                low: low,
+                activeOrder: availableTrade,
+                ipoPrice: firestoreRef.FieldValue.increment(
+                  (req.tradeData.sharesPrice - ipoPrice) / 10
+                ),
+              }),
+
+            db
+              .collection("stocks")
+              .doc(req.tradeData.stockId)
+              .collection("stockHistory")
+              .doc(dateId)
+              .set({
+                open: open,
+                high: high,
+                low: low,
+                close: req.tradeData.sharesPrice,
+                time: date,
+              }),
+          ]);
+        })
+        .then(() => {
+          return res.status(200).json({
+            general: `Stock ${req.tradeData.stockId} and trade ${req.params.tradeId} updated successfully!`,
+          });
+        })
+        .catch((values) => {
+          return res.status(400).json({ error: "Something went wrong" });
         });
-    })
-    .then(() => {
-      return res.status(200).json({
-        general: `Stock ${req.tradeData.stockId} and trade ${req.params.tradeId} updated successfully!`,
-      });
     });
-
-  //add trading view chart updates here
-
-  //calls function to update high, low, etc.
 };
 
 exports.removeTrade = (req, res) => {
   const tradeDoc = db.collection("trades").doc(req.params.tradeId);
-  tradeDoc
-    .get()
-    .then((doc) => {
-      let docData = doc.data();
-      if (
-        doc.exists &&
-        (docData.buyingUserId == req.user.uid ||
-          docData.sellingUserId == req.user.uid) &&
-        !docData.completed
-      ) {
-        tradeDoc.delete();
-        return res.status(200).json({
-          general: `Trade ${req.params.tradeId} deleted successfully.`,
+  let docData;
+  tradeDoc.get().then((doc) => {
+    docData = doc.data();
+    if (
+      doc.exists &&
+      (docData.buyingUserId == req.user.uid ||
+        docData.sellingUserId == req.user.uid) &&
+      !docData.completed
+    ) {
+      tradeDoc
+        .delete()
+        .then(() => {
+          let activeOrder = false;
+          db.collection("trades")
+            .where("stockId", "==", docData.stockId)
+            .get()
+            .then((query) => {
+              query.forEach((trade) => {
+                if (trade.data().completed == false) {
+                  activeOrder = true;
+                }
+              });
+            })
+            .then(() => {
+              if (!activeOrder) {
+                db.collection("stocks")
+                  .doc(docData.stockId)
+                  .update({ activeOrder: false });
+              }
+            })
+            .then(() => {
+              return res.status(200).json({ general: "Deleted successfully!" });
+            });
+        })
+        .catch((err) => {
+          console.error(err);
+          return res.status(500).json({ error: err.code });
         });
-      } else {
-        return res.status(403).json({
-          general: "Trade couldn't be deleted.",
-        });
-      }
-    })
-    .catch((err) => {
-      console.error(err);
-      return res.status(500).json({ error: err.code });
-    });
+    } else {
+      return res.status(403).json({
+        general: "Trade couldn't be deleted.",
+      });
+    }
+  });
 };
