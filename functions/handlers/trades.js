@@ -380,10 +380,7 @@ exports.updateStockDetails = (req, res) => {
               .collection("stockHistory")
               .doc(dateId)
               .set({
-                open: open,
-                high: high,
-                low: low,
-                close: req.tradeData.sharesPrice,
+                value: req.tradeData.sharesPrice,
                 time: date,
               }),
           ]);
