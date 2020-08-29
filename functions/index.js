@@ -47,20 +47,19 @@ const AdminAuth = require("./utils/AdminAuth");
 //add authentications
 
 //Stocks Routes
-//add filtering
-app.get("/stocks", getAllStocks);
-app.get("/stocks/:stockId", FBAuth, getStockData, returnStockData);
-app.post("/stocks", FBAuth, AdminAuth, createStock);
-app.post("/stocks/updateStandings", FBAuth, AdminAuth, updateStockStandings);
-app.get("/stocks/:stockId/stockHistory", FBAuth, getStockHistory);
-app.put("/stocks/:stockId/buyIpo", FBAuth, ipoBuyStock);
-app.put("/stocks/:stockId/sellIpo", FBAuth, ipoSellStock);
+app.get("/stocks", getAllStocks); //gets all stocks
+app.get("/stocks/:stockId", FBAuth, getStockData, returnStockData); //gets specific stock by id
+app.post("/stocks", FBAuth, AdminAuth, createStock); //creates a stock; admin auth only
+app.post("/stocks/updateStandings", FBAuth, AdminAuth, updateStockStandings); //updates point values for each stock
+app.get("/stocks/:stockId/stockHistory", FBAuth, getStockHistory); //gets the stock price history by id
+app.put("/stocks/:stockId/buyIpo", FBAuth, ipoBuyStock); //allows user to instant buy a stock
+app.put("/stocks/:stockId/sellIpo", FBAuth, ipoSellStock); //allows user to instant sell a stock
 
 //Trades Routes
-app.get("/trades/all/:stockId", FBAuth, getAllTradesForStock);
-app.get("/trades/:tradeId", FBAuth, getTradeData, returnTradeDetails);
-app.get("/userTrades", FBAuth, getAllTradesForUser);
-app.post("/trades", FBAuth, createTrade);
+app.get("/trades/all/:stockId", FBAuth, getAllTradesForStock); //get all transactions by stock id
+app.get("/trades/:tradeId", FBAuth, getTradeData, returnTradeDetails); //get specific trade details by id
+app.get("/userTrades", FBAuth, getAllTradesForUser); // gets all trades for user
+app.post("/trades", FBAuth, createTrade); //creates a trade
 app.put(
   "/trades/:tradeId",
   FBAuth,
@@ -69,24 +68,25 @@ app.put(
   updateTradeDetails,
   transferShares,
   updateStockDetails
-);
-app.delete("/trades/:tradeId", FBAuth, removeTrade);
+); //finalizes an already created trade if all validations are met
+app.delete("/trades/:tradeId", FBAuth, removeTrade); //removes an active trade that isn't finalized
 
 //User Routes
-app.post("/signup", signup);
-app.post("/login", login);
-app.get("/user", FBAuth, getUserDetails); //incomplete
-app.get("/userStocks", FBAuth, getUserOwnedStocks);
-app.get("/watchlist", FBAuth, getUserWatchlist);
-app.post("/watchlist/:stockId", FBAuth, addToWatchlist);
-app.delete("/watchlist/:stockId", FBAuth, removeFromWatchlist);
-app.get("/transactions", FBAuth, getTransactions);
-app.get("/accountHistory", FBAuth, getAccountHistory);
-app.get("/leaderboard", FBAuth, getLeaderboard);
+app.post("/signup", signup); //signs up a user
+app.post("/login", login); //logs in a user
+app.get("/user", FBAuth, getUserDetails); //gets user profile information
+app.get("/userStocks", FBAuth, getUserOwnedStocks); //gets user's portfolio of stocks
+app.get("/watchlist", FBAuth, getUserWatchlist); //gets user watchlist
+app.post("/watchlist/:stockId", FBAuth, addToWatchlist); //adds a stock to their watchlist
+app.delete("/watchlist/:stockId", FBAuth, removeFromWatchlist); //removes stock from user's watchlist
+app.get("/transactions", FBAuth, getTransactions); //gets transactions for a user
+app.get("/accountHistory", FBAuth, getAccountHistory); //gets account value history for a user
+app.get("/leaderboard", FBAuth, getLeaderboard);//gets current leaderboard
 
-//app.put("/user", FBAuth, updateUserDetails); //incomplete
 //to implement
 /*
+
+//app.put("/user", FBAuth, updateUserDetails); //incomplete
 app.post("/user/:userId/acccountValue", FBAuth, updateAccountValue);
 app.get("/user/:userId/acccountValue", FBAuth, getAccountValue);
 app.get("user/:userId/ownedStocks", FBAuth, getOwnedStocks);
@@ -109,6 +109,10 @@ app.delete("/user/:userId", FBAuth, deleteUser);
 
 exports.api = functions.https.onRequest(app);
 
+/**
+ * Auto updates necessary information every night at 12AM
+ * Updates stock info, account values, and leaderboards
+ */
 exports.autoUpdate = functions.pubsub
   .schedule("0 0 * * *")
   .timeZone("America/New_York")

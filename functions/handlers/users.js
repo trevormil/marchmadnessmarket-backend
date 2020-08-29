@@ -9,6 +9,7 @@ const {
   reduceUserDetails,
 } = require("../utils/validators");
 
+//signs up a user
 exports.signup = (req, res) => {
   let newUser = {
     email: req.body.email,
@@ -82,6 +83,7 @@ exports.signup = (req, res) => {
     });
 };
 
+//logs in a user
 exports.login = (req, res) => {
   const user = {
     email: req.body.email,
@@ -112,6 +114,7 @@ exports.login = (req, res) => {
     });
 };
 
+//gets user details
 exports.getUserDetails = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .get()
@@ -127,6 +130,7 @@ exports.getUserDetails = (req, res) => {
     });
 };
 
+//gets user owned stocks
 exports.getUserOwnedStocks = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("ownedStocks")
@@ -144,6 +148,7 @@ exports.getUserOwnedStocks = (req, res) => {
     });
 };
 
+//gets a user's watchlist
 exports.getUserWatchlist = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("watchlist")
@@ -161,6 +166,7 @@ exports.getUserWatchlist = (req, res) => {
     });
 };
 
+//gets current leaderboard
 exports.getLeaderboard = (req, res) => {
   db.collection("users")
     .orderBy("totalAccountValue", "desc")
@@ -182,6 +188,7 @@ exports.getLeaderboard = (req, res) => {
     });
 };
 
+//adds a stock to watchlist
 exports.addToWatchlist = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("watchlist")
@@ -194,6 +201,7 @@ exports.addToWatchlist = (req, res) => {
     });
 };
 
+//removes from watchlist
 exports.removeFromWatchlist = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("watchlist")
@@ -203,6 +211,8 @@ exports.removeFromWatchlist = (req, res) => {
       return res.status(200).json({ general: "Success" });
     });
 };
+
+//gets all transactions for a user
 exports.getTransactions = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("transactionHistory")
@@ -221,6 +231,7 @@ exports.getTransactions = (req, res) => {
     });
 };
 
+//gets a user's account history
 exports.getAccountHistory = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
     .collection("accountHistory")
@@ -239,6 +250,9 @@ exports.getAccountHistory = (req, res) => {
 };
 
 exports.updateUserDetails = (req, res) => {
+  //not implemented yet
+
+
   /*let userDetails = reduceUserDetails(req.body);
   db.doc(`/users/${req.user.userName}`)
     .update(userDetails)

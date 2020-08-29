@@ -7,6 +7,7 @@ const {
   validateSharesOwned,
 } = require("../utils/validators");
 
+//gets all stocks
 exports.getAllStocks = (req, res) => {
   db.collection("stocks")
     .orderBy("price", "desc")
@@ -21,6 +22,7 @@ exports.getAllStocks = (req, res) => {
     .catch((err) => console.error(err));
 };
 
+//gets stock by id
 exports.getStockData = (req, res, next) => {
   db.collection("stocks")
     .doc(req.params.stockId)
@@ -37,10 +39,12 @@ exports.getStockData = (req, res, next) => {
     });
 };
 
+//returns stock data
 exports.returnStockData = (req, res) => {
   return res.status(201).json(req.stockData);
 };
 
+//gets stock price history
 exports.getStockHistory = (req, res) => {
   db.doc(`/stocks/${req.params.stockId}`)
     .collection("stockHistory")
@@ -58,6 +62,7 @@ exports.getStockHistory = (req, res) => {
     });
 };
 
+//creates a stock
 exports.createStock = (req, res) => {
   const { valid, errors } = validateStockDetails(req.body);
   if (!valid) return res.status(400).json(errors);
@@ -79,6 +84,7 @@ exports.createStock = (req, res) => {
     });
 };
 
+//buys a stock at BIN price
 exports.ipoBuyStock = async (req, res) => {
   const stockId = req.params.stockId;
   const numShares = req.body.numShares;
@@ -181,6 +187,7 @@ exports.ipoBuyStock = async (req, res) => {
   return res.status(201).json({ general: "Success" });
 };
 
+//sells a stock at half the BIN price
 exports.ipoSellStock = async (req, res) => {
   const stockId = req.params.stockId;
   const numShares = req.body.numShares;
@@ -270,6 +277,7 @@ exports.ipoSellStock = async (req, res) => {
   return res.status(201).json({ general: "Success" });
 };
 
+//update points value for all teams
 exports.updateStockStandings = async (req, res) => {
   let teamArr = [];
   let splitStr = req.body.split("*");

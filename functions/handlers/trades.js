@@ -7,6 +7,7 @@ const {
   validateDifferentAccounts,
 } = require("../utils/validators");
 
+//gets trade data by id
 exports.getTradeData = (req, res, next) => {
   db.collection("trades")
     .doc(req.params.tradeId)
@@ -28,6 +29,7 @@ exports.getTradeData = (req, res, next) => {
     });
 };
 
+//gets all trades for a specific stock
 exports.getAllTradesForStock = (req, res) => {
   db.collection("trades")
     .where("stockId", "==", req.params.stockId)
@@ -45,6 +47,7 @@ exports.getAllTradesForStock = (req, res) => {
     });
 };
 
+//gets all trades for a user
 exports.getAllTradesForUser = (req, res) => {
   db.collection("trades")
     .where("completed", "==", false)
@@ -67,6 +70,7 @@ exports.getAllTradesForUser = (req, res) => {
     });
 };
 
+//returns trade details
 exports.returnTradeDetails = (req, res) => {
   if (
     req.tradeData.buyingUserId == req.user.uid ||
@@ -79,6 +83,7 @@ exports.returnTradeDetails = (req, res) => {
     });
 };
 
+//creates a trade
 exports.createTrade = (req, res, next) => {
   let newTrade = {
     stockId: req.body.stockId,
@@ -136,6 +141,8 @@ exports.createTrade = (req, res, next) => {
     });
 };
 
+//validates trade is able to go through
+//proper account balance and owned shares are owned
 exports.validateTrade = (req, res, next) => {
   if (req.tradeData.completed)
     return res.status(400).send("Trade already completed");
@@ -188,6 +195,7 @@ exports.validateTrade = (req, res, next) => {
     });
 };
 
+//updates a trade with finalized details
 exports.updateTradeDetails = (req, res, next) => {
   db.collection("trades")
     .doc(req.params.tradeId)
@@ -197,6 +205,7 @@ exports.updateTradeDetails = (req, res, next) => {
     });
 };
 
+//transfers shares between accounts
 exports.transferShares = (req, res, next) => {
   const buyingUserDoc = db
     .collection("users")
@@ -326,6 +335,7 @@ exports.transferShares = (req, res, next) => {
   });
 };
 
+//updates the stock details to reflect the trade that just happened
 exports.updateStockDetails = (req, res) => {
   let availableTrade = false;
   db.collection("trades")
@@ -396,6 +406,7 @@ exports.updateStockDetails = (req, res) => {
     });
 };
 
+//removes an unfinalized trade
 exports.removeTrade = (req, res) => {
   const tradeDoc = db.collection("trades").doc(req.params.tradeId);
   let docData;

@@ -92,6 +92,7 @@ exports.validateStockDetails = (stock) => {
   };
 };
 
+//gets rid of any extra properties in the request body
 exports.reduceStockDetails = (stock) => {
   let stockDetails = {
     price: stock.price,
@@ -136,6 +137,7 @@ exports.validateTradeDetails = (trade, buy) => {
   };
 };
 
+//gets rid of extra properties in the request body
 exports.reduceUserDetails = (data) => {
   let userDetails = {};
 
@@ -148,6 +150,7 @@ exports.reduceUserDetails = (data) => {
   return userDetails;
 };
 
+//validates stock id exists
 exports.validateStockId = (trade) => {
   return db
     .collection("stocks")
@@ -181,6 +184,7 @@ exports.validateBalance = (buyingUserName, numShares, sharesPrice) => {
     });
 };
 
+//validates user owns that amount of shares
 exports.validateSharesOwned = (sellingUserName, stockId, numShares) => {
   return db
     .collection("users")
@@ -200,6 +204,7 @@ exports.validateSharesOwned = (sellingUserName, stockId, numShares) => {
     });
 };
 
+//validates that you can't buy your own trade up
 exports.validateDifferentAccounts = (buyer, seller) => {
   if (buyer === seller) {
     return Promise.reject("Buyer and seller can't be same person");
