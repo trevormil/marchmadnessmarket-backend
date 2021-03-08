@@ -1,5 +1,5 @@
 module.exports = {
-  apiKey: "", //add valid apiKey here
+  apiKey: "AIzaSyC_BOgoYRs7r4Yrfu2E4PfIF_EpOOOjtpw",
   authDomain: "tm-market.firebaseapp.com",
   databaseURL: "https://tm-market.firebaseio.com",
   projectId: "tm-market",

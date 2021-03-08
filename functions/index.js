@@ -41,6 +41,7 @@ const {
   removeFromWatchlist,
   getLeaderboard,
 } = require("./handlers/users");
+const { getAllScores } = require("./handlers/scores");
 const FBAuth = require("./utils/FBAuth");
 const AdminAuth = require("./utils/AdminAuth");
 
@@ -54,6 +55,9 @@ app.post("/stocks/updateStandings", FBAuth, AdminAuth, updateStockStandings); //
 app.get("/stocks/:stockId/stockHistory", FBAuth, getStockHistory); //gets the stock price history by id
 app.put("/stocks/:stockId/buyIpo", FBAuth, ipoBuyStock); //allows user to instant buy a stock
 app.put("/stocks/:stockId/sellIpo", FBAuth, ipoSellStock); //allows user to instant sell a stock
+
+//Scores Routes
+app.get("/scores", FBAuth, getAllScores); //allows user to instant sell a stock
 
 //Trades Routes
 app.get("/trades/all/:stockId", FBAuth, getAllTradesForStock); //get all transactions by stock id
@@ -81,11 +85,10 @@ app.post("/watchlist/:stockId", FBAuth, addToWatchlist); //adds a stock to their
 app.delete("/watchlist/:stockId", FBAuth, removeFromWatchlist); //removes stock from user's watchlist
 app.get("/transactions", FBAuth, getTransactions); //gets transactions for a user
 app.get("/accountHistory", FBAuth, getAccountHistory); //gets account value history for a user
-app.get("/leaderboard", FBAuth, getLeaderboard);//gets current leaderboard
+app.get("/leaderboard", FBAuth, getLeaderboard); //gets current leaderboard
 
 //to implement
 /*
-
 //app.put("/user", FBAuth, updateUserDetails); //incomplete
 app.post("/user/:userId/acccountValue", FBAuth, updateAccountValue);
 app.get("/user/:userId/acccountValue", FBAuth, getAccountValue);
