@@ -26,6 +26,7 @@ const {
   validateTrade,
   getAllTradesForStock,
   getAllTradesForUser,
+  getAllTrades,
 } = require("./handlers/trades");
 
 const {
@@ -57,9 +58,10 @@ app.put("/stocks/:stockId/buyIpo", FBAuth, ipoBuyStock); //allows user to instan
 app.put("/stocks/:stockId/sellIpo", FBAuth, ipoSellStock); //allows user to instant sell a stock
 
 //Scores Routes
-app.get("/scores", FBAuth, getAllScores); //allows user to instant sell a stock
+app.get("/scores", getAllScores); //allows user to instant sell a stock
 
 //Trades Routes
+app.get("/trades", FBAuth, getAllTrades); //get all transactions by stock id
 app.get("/trades/all/:stockId", FBAuth, getAllTradesForStock); //get all transactions by stock id
 app.get("/trades/:tradeId", FBAuth, getTradeData, returnTradeDetails); //get specific trade details by id
 app.get("/userTrades", FBAuth, getAllTradesForUser); // gets all trades for user
@@ -145,6 +147,7 @@ exports.autoUpdate = functions.pubsub
             db.collection("stocks")
               .doc(stock.id)
               .update({
+                ipoPrice: docData.currPoints + 1,
                 volume: 0,
                 open: docData.price,
                 low: docData.price,
@@ -199,7 +202,7 @@ exports.autoUpdate = functions.pubsub
  * Updates stock info, account values, and leaderboards
  */
 exports.autoUpdateWeekly = functions.pubsub
-  .schedule("55 11 * * 0")
+  .schedule("55 23 * * 2")
   .timeZone("America/New_York")
   .onRun((context) => {
     db.collection("users")
@@ -207,7 +210,7 @@ exports.autoUpdateWeekly = functions.pubsub
       .then((res) => {
         res.forEach((user) => {
           db.collection("users")
-            .doc(user.id)
+            .doc(user.data().userName)
             .update({
               accountBalance: firestoreRef.FieldValue.increment(100),
             });
