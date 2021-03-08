@@ -193,3 +193,25 @@ exports.autoUpdate = functions.pubsub
       });
     return null;
   });
+
+/**
+ * Auto updates necessary information every night at 12AM
+ * Updates stock info, account values, and leaderboards
+ */
+exports.autoUpdateWeekly = functions.pubsub
+  .schedule("55 11 * * 0")
+  .timeZone("America/New_York")
+  .onRun((context) => {
+    db.collection("users")
+      .get()
+      .then((res) => {
+        res.forEach((user) => {
+          db.collection("users")
+            .doc(user.id)
+            .update({
+              accountBalance: firestoreRef.FieldValue.increment(100),
+            });
+        });
+      });
+    return null;
+  });

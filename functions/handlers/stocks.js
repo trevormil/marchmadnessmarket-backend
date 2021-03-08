@@ -280,6 +280,44 @@ exports.ipoSellStock = async (req, res) => {
 //update points value for all teams
 exports.updateStockStandings = async (req, res) => {
   let teamArr = [];
+  let splitStr = req.body.split(",");
+  let allStockArr = [];
+  await db
+    .collection("stocks")
+    .get()
+    .then((query) => {
+      query.forEach((stock) =>
+        allStockArr.push({
+          id: stock.id,
+          stockName: stock.data().stockName,
+          seed: stock.data().seed,
+        })
+      );
+    });
+
+  splitStr.forEach((team) => {
+    team = team.replace("\r\n", "");
+    teamArr.push(team);
+    allStockArr.forEach(async (stock) => {
+      if (stock.stockName === team) {
+        await db
+          .collection("stocks")
+          .doc(stock.id)
+          .update({
+            currPoints: firestoreRef.FieldValue.increment(stock.seed),
+          })
+          .catch((err) => {
+            console.error(err);
+            return Promise.reject();
+          });
+      }
+    });
+  });
+  return res.send(teamArr);
+  /*
+
+  NFL Standing Updates w/ Web Scraper from NFL.com
+  let teamArr = [];
   let splitStr = req.body.split("*");
   splitStr.shift();
   let count = 1;
@@ -312,7 +350,7 @@ exports.updateStockStandings = async (req, res) => {
     });
     count++;
   });
-  return res.send(teamArr);
+  return res.send(teamArr);*/
 };
 
 const getPoints = (rank) => {

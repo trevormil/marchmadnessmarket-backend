@@ -70,6 +70,9 @@ exports.validateStockDetails = (stock) => {
   if (!isType(stock.price, "number") || stock.price < 0) {
     errors.price = stock.price;
   }
+  if (!isType(stock.seed, "number") || stock.seed < 0) {
+    errors.seed = stock.seed;
+  }
   if (!isType(stock.float, "number") || stock.float < 0) {
     errors.float = stock.float;
   }
@@ -108,6 +111,8 @@ exports.reduceStockDetails = (stock) => {
     dividends: stock.dividends,
     dateCreated: firestoreRef.Timestamp.now(),
     ipoPrice: stock.ipoPrice,
+    seed: stock.seed,
+    currPoints: 0,
   };
   return stockDetails;
 };
