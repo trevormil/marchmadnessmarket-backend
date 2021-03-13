@@ -133,6 +133,7 @@ exports.autoUpdate = functions.pubsub
         .collection("stocks")
         .get()
         .then((res) => {
+          let updatedPrice = docData.currPoints == 0 ? 1 : docData.currPoints;
           res.forEach((stock) => {
             const docData = stock.data();
             stockData.push(docData);
@@ -147,7 +148,7 @@ exports.autoUpdate = functions.pubsub
             db.collection("stocks")
               .doc(stock.id)
               .update({
-                ipoPrice: docData.currPoints + 1,
+                ipoPrice: updatedPrice,
                 volume: 0,
                 open: docData.price,
                 low: docData.price,
@@ -201,6 +202,7 @@ exports.autoUpdate = functions.pubsub
  * Auto updates necessary information every night at 12AM
  * Updates stock info, account values, and leaderboards
  */
+/*
 exports.autoUpdateWeekly = functions.pubsub
   .schedule("55 23 * * 2")
   .timeZone("America/New_York")
@@ -218,3 +220,4 @@ exports.autoUpdateWeekly = functions.pubsub
       });
     return null;
   });
+*/

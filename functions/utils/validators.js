@@ -88,6 +88,9 @@ exports.validateStockDetails = (stock) => {
   if (!isType(stock.dividends, "string") || isEmpty(stock.dividends)) {
     errors.dividends = stock.dividends;
   }
+  if (!isType(stock.imageUrl, "string") || isEmpty(stock.imageUrl)) {
+    errors.imageUrl = stock.imageUrl;
+  }
 
   return {
     errors,
@@ -113,6 +116,7 @@ exports.reduceStockDetails = (stock) => {
     ipoPrice: stock.ipoPrice,
     seed: stock.seed,
     currPoints: 0,
+    imageUrl: stock.imageUrl,
   };
   return stockDetails;
 };
@@ -134,6 +138,9 @@ exports.validateTradeDetails = (trade, buy) => {
   }
   if (!isType(trade.stockId, "string") || isEmpty(trade.stockId)) {
     errors.stockId = trade.stockId;
+  }
+  if (!isType(trade.imageUrl, "string") || isEmpty(trade.imageUrl)) {
+    errors.imageUrl = trade.imageUrl;
   }
 
   return {
