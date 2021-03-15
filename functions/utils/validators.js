@@ -139,9 +139,6 @@ exports.validateTradeDetails = (trade, buy) => {
   if (!isType(trade.stockId, "string") || isEmpty(trade.stockId)) {
     errors.stockId = trade.stockId;
   }
-  if (!isType(trade.imageUrl, "string") || isEmpty(trade.imageUrl)) {
-    errors.imageUrl = trade.imageUrl;
-  }
 
   return {
     errors,

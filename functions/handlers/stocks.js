@@ -179,9 +179,6 @@ exports.ipoBuyStock = async (req, res) => {
   db.collection("stocks")
     .doc(stockId)
     .update({
-      ipoPrice: firestoreRef.FieldValue.increment(
-        (numShares * stockData.ipoPrice) / 1000
-      ),
       volume: firestoreRef.FieldValue.increment(numShares),
     });
   return res.status(201).json({ general: "Success" });

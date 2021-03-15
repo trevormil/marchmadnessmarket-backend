@@ -133,31 +133,34 @@ exports.autoUpdate = functions.pubsub
         .collection("stocks")
         .get()
         .then((res) => {
-          let updatedPrice = docData.currPoints == 0 ? 1 : docData.currPoints;
           res.forEach((stock) => {
             const docData = stock.data();
             stockData.push(docData);
-            db.collection("stocks")
-              .doc(stock.id)
-              .collection("stockHistory")
-              .doc(dateId)
-              .set({
-                value: docData.ipoPrice,
-                time: date,
-              });
-            db.collection("stocks")
-              .doc(stock.id)
-              .update({
-                ipoPrice: updatedPrice,
-                volume: 0,
-                open: docData.price,
-                low: docData.price,
-                high: docData.price,
-                marketCap: docData.price * docData.float,
-              });
           });
         }),
     ]);
+
+    stockData.forEach((docData) => {
+      let updatedPrice = docData.currPoints == 0 ? 1 : docData.currPoints * 2;
+      db.collection("stocks")
+        .doc(stock.id)
+        .collection("stockHistory")
+        .doc(dateId)
+        .set({
+          value: docData.ipoPrice,
+          time: date,
+        });
+      db.collection("stocks")
+        .doc(stock.id)
+        .update({
+          ipoPrice: updatedPrice,
+          volume: 0,
+          open: docData.price,
+          low: docData.price,
+          high: docData.price,
+          marketCap: docData.price * docData.float,
+        });
+    });
 
     db.collection("users")
       .get()

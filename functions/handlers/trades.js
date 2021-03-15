@@ -104,7 +104,6 @@ exports.returnTradeDetails = (req, res) => {
 exports.createTrade = (req, res, next) => {
   let newTrade = {
     stockId: req.body.stockId,
-    imageUrl: req.body.imageUrl,
     dateCreated: firestoreRef.Timestamp.now().toDate().toLocaleDateString(),
     dateFinalized: null,
     sharesPrice: req.body.sharesPrice,
@@ -155,6 +154,7 @@ exports.createTrade = (req, res, next) => {
         });
     })
     .catch((err) => {
+      console.log(err);
       return res.status(400).json({ error: "Error validating trade." });
     });
 };
