@@ -148,6 +148,24 @@ exports.getUserOwnedStocks = (req, res) => {
     });
 };
 
+//gets user owned stocks
+exports.getOtherUserOwnedStocks = (req, res) => {
+  db.doc(`/users/${req.params.userId}`)
+    .collection("ownedStocks")
+    .get()
+    .then((data) => {
+      let stocks = [];
+      data.forEach((doc) => {
+        stocks.push(doc.data());
+      });
+      return res.status(201).json(stocks);
+    })
+    .catch((err) => {
+      console.error(err);
+      return res.status(404).json({ general: "Something went wrong" });
+    });
+};
+
 //gets a user's watchlist
 exports.getUserWatchlist = (req, res) => {
   db.doc(`/users/${req.user.userName}`)
@@ -251,8 +269,6 @@ exports.getAccountHistory = (req, res) => {
 
 exports.updateUserDetails = (req, res) => {
   //not implemented yet
-
-
   /*let userDetails = reduceUserDetails(req.body);
   db.doc(`/users/${req.user.userName}`)
     .update(userDetails)

@@ -35,6 +35,7 @@ const {
   updateUserDetails,
   getUserDetails,
   getUserOwnedStocks,
+  getOtherUserOwnedStocks,
   getAccountHistory,
   getTransactions,
   getUserWatchlist,
@@ -49,6 +50,87 @@ const AdminAuth = require("./utils/AdminAuth");
 //add authentications
 
 //Stocks Routes
+const pubSub = async (req, res) => {
+  const date = firestoreRef.Timestamp.now()
+    .toDate()
+    .toLocaleDateString()
+    .toString();
+  const dateId = date.replace("/", "").replace("/", "");
+  const stockData = [];
+  await db
+    .collection("stocks")
+    .get()
+    .then((querySnapshot) => {
+      querySnapshot.docs.forEach((doc) => {
+        stockData.push(doc.data());
+      });
+    });
+
+  stockData.forEach((docData) => {
+    let updatedPrice = docData.currPoints == 0 ? 1 : docData.currPoints * 2;
+    db.collection("stocks")
+      .doc(docData.stockId)
+      .collection("stockHistory")
+      .doc(dateId)
+      .set({
+        value: docData.ipoPrice,
+        time: date,
+      });
+    db.collection("stocks")
+      .doc(docData.stockId)
+      .update({
+        ipoPrice: updatedPrice,
+        volume: 0,
+        open: docData.price,
+        low: docData.price,
+        high: docData.price,
+        marketCap: docData.price * docData.float,
+      });
+  });
+
+  return res.status(200).send(stockData);
+
+  db.collection("users")
+    .get()
+    .then((res) => {
+      res.forEach((user) => {
+        const docData = user.data();
+        let totalAccountValue = docData.accountBalance;
+        db.collection("users")
+          .doc(user.id)
+          .collection("ownedStocks")
+          .get()
+          .then((resp) => {
+            resp.forEach((doc) => {
+              const ownedStockData = doc.data();
+              totalAccountValue +=
+                ownedStockData.numShares *
+                stockData.find(
+                  (stock) => stock.stockId === ownedStockData.stockId
+                ).currPoints;
+            });
+          })
+          .then(() => {
+            db.collection("users").doc(user.id).update({
+              totalAccountValue: totalAccountValue,
+            });
+
+            db.collection("users")
+              .doc(user.id)
+              .collection("accountHistory")
+              .doc(dateId)
+              .set({
+                value: totalAccountValue,
+                time: date,
+              });
+          });
+      });
+    });
+  return null;
+};
+
+app.get("/test", pubSub);
+
 app.get("/stocks", getAllStocks); //gets all stocks
 app.get("/stocks/:stockId", FBAuth, getStockData, returnStockData); //gets specific stock by id
 app.post("/stocks", FBAuth, AdminAuth, createStock); //creates a stock; admin auth only
@@ -82,6 +164,7 @@ app.post("/signup", signup); //signs up a user
 app.post("/login", login); //logs in a user
 app.get("/user", FBAuth, getUserDetails); //gets user profile information
 app.get("/userStocks", FBAuth, getUserOwnedStocks); //gets user's portfolio of stocks
+app.get("/userStocks/:userId", FBAuth, getOtherUserOwnedStocks); //gets user's portfolio of stocks
 app.get("/watchlist", FBAuth, getUserWatchlist); //gets user watchlist
 app.post("/watchlist/:stockId", FBAuth, addToWatchlist); //adds a stock to their watchlist
 app.delete("/watchlist/:stockId", FBAuth, removeFromWatchlist); //removes stock from user's watchlist
@@ -121,37 +204,34 @@ exports.api = functions.https.onRequest(app);
 exports.autoUpdate = functions.pubsub
   .schedule("0 0 * * *")
   .timeZone("America/New_York")
-  .onRun((context) => {
+  .onRun(async (context) => {
     const date = firestoreRef.Timestamp.now()
       .toDate()
       .toLocaleDateString()
       .toString();
     const dateId = date.replace("/", "").replace("/", "");
     const stockData = [];
-    Promise.all([
-      db
-        .collection("stocks")
-        .get()
-        .then((res) => {
-          res.forEach((stock) => {
-            const docData = stock.data();
-            stockData.push(docData);
-          });
-        }),
-    ]);
-
+    await db
+      .collection("stocks")
+      .get()
+      .then((querySnapshot) => {
+        querySnapshot.docs.forEach((doc) => {
+          stockData.push(doc.data());
+        });
+      });
     stockData.forEach((docData) => {
       let updatedPrice = docData.currPoints == 0 ? 1 : docData.currPoints * 2;
       db.collection("stocks")
-        .doc(stock.id)
+        .doc(docData.stockId)
         .collection("stockHistory")
         .doc(dateId)
         .set({
           value: docData.ipoPrice,
           time: date,
         });
+
       db.collection("stocks")
-        .doc(stock.id)
+        .doc(docData.stockId)
         .update({
           ipoPrice: updatedPrice,
           volume: 0,
