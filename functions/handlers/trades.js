@@ -165,8 +165,8 @@ exports.validateTrade = (req, res, next) => {
   if (req.tradeData.completed)
     return res.status(400).send("Trade already completed");
 
-  let dateFrom = ["19/03/2021", "27/03/2021", "03/04/2021"];
-  let dateTo = ["23/03/2021", "31/03/2021", "20/04/2021"];
+  let dateFrom = ["22/05/2021"];
+  let dateTo = ["22/07/2021"];
   let currDate = new Date();
   let dateCheck =
     currDate.getDate() +
