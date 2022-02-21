@@ -1,6 +1,6 @@
 const { db, firestoreRef } = require('../utils/admin');
 const firebaseConfig = require('../utils/config');
-const firebase = require('firebase');
+const firebase = require('firebase/compat/app');
 firebase.initializeApp(firebaseConfig);
 
 const {
