@@ -1,5 +1,3 @@
-const { admin, db } = require('./admin');
-
 module.exports = (req, res, next) => {
     if (req.user.userName === 'trevormil') {
         return next();

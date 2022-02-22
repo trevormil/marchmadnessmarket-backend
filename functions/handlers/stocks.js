@@ -171,7 +171,6 @@ exports.ipoBuyStock = async (req, res) => {
                 (buyerAvgBuyPrice * buyerSharesOwned +
                     numShares * stockData.ipoPrice) /
                 (buyerSharesOwned + numShares),
-            
         })
         .catch(() => {
             buyingUserDoc
