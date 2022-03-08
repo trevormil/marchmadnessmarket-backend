@@ -3,7 +3,7 @@ const axios = require('axios').default;
 //gets all stocks
 exports.getAllScores = (req, res) => {
     const url =
-        'http://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard';
+        'http://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard';
     axios
         .get(url)
         .then((res) => {

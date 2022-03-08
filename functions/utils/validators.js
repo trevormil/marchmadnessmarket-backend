@@ -68,26 +68,14 @@ exports.validateLogInData = (user) => {
 
 exports.validateStockDetails = (stock) => {
     let errors = {};
-    if (!isType(stock.price, 'number') || stock.price < 0) {
-        errors.price = stock.price;
-    }
     if (!isType(stock.seed, 'number') || stock.seed < 0) {
         errors.seed = stock.seed;
-    }
-    if (!isType(stock.float, 'number') || stock.float < 0) {
-        errors.float = stock.float;
     }
     if (!isType(stock.stockName, 'string') || isEmpty(stock.stockName)) {
         errors.stockName = stock.stockName;
     }
-    if (!isType(stock.market, 'string') || isEmpty(stock.market)) {
-        errors.market = stock.market;
-    }
     if (!isType(stock.bio, 'string') || isEmpty(stock.bio)) {
         errors.bio = stock.bio;
-    }
-    if (!isType(stock.dividends, 'string') || isEmpty(stock.dividends)) {
-        errors.dividends = stock.dividends;
     }
     if (!isType(stock.imageUrl, 'string') || isEmpty(stock.imageUrl)) {
         errors.imageUrl = stock.imageUrl;
@@ -102,19 +90,12 @@ exports.validateStockDetails = (stock) => {
 //gets rid of any extra properties in the request body
 exports.reduceStockDetails = (stock) => {
     let stockDetails = {
-        price: stock.price,
-        market: stock.market,
-        float: stock.float,
+        price: 1,
+        float: 0,
         stockName: stock.stockName,
         bio: stock.bio,
-        volume: 0,
-        high: stock.price,
-        open: stock.price,
-        low: stock.price,
-        marketCap: stock.price * stock.float,
-        dividends: stock.dividends,
         dateCreated: firestoreRef.Timestamp.now(),
-        ipoPrice: stock.ipoPrice,
+        ipoPrice: 1,
         seed: stock.seed,
         currPoints: 0,
         imageUrl: stock.imageUrl,
