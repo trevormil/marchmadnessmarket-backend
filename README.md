@@ -4,11 +4,8 @@ This repository contains the code used for the API linked with Google Firebase.
 
 Improvements Noted for 2023
 MMM Feedback
-* Fix refresh on user page - white screen
-* Profile pic?
-* Hide picks before first game
 * Automatic Updating of Scores
-* More responsive design
+* Better UI
 * Minimum teams purchased?
 
 
