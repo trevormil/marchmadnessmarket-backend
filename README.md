@@ -8,7 +8,7 @@ MMM Feedback
 * Profile pic?
 * Hide picks before first game
 * Automatic Updating of Scores
-* More responsive design
+* Better UI
 * Minimum teams purchased?
 
 
