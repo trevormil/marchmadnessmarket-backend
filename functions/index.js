@@ -55,7 +55,7 @@ app.post('/stocks', FBAuth, AdminAuth, createStock); //creates a stock; admin au
 app.post('/stocks/updateStandings', FBAuth, AdminAuth, updateStockStandings); //updates point values for each stock
 // app.get('/stocks/:stockId/stockHistory', FBAuth, getStockHistory); //gets the stock price history by id
 app.put('/stocks/:stockId/buyIpo', FBAuth, ipoBuyStock); //allows user to instant buy a stock
-// app.put('/stocks/:stockId/sellIpo', FBAuth, ipoSellStock); //allows user to instant sell a stock
+app.put('/stocks/:stockId/sellIpo', FBAuth, ipoSellStock); //allows user to instant sell a stock
 
 //Scores Routes
 app.get('/scores', getAllScores); //allows user to instant sell a stock

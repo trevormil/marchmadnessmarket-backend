@@ -116,17 +116,17 @@ exports.ipoBuyStock = async (req, res) => {
     await Promise.all([
         validateBalance(req.user.userName, numShares, stockData.ipoPrice),
 
-        buyingUserDoc
-            .collection('ownedStocks')
-            .doc(stockId)
-            .get()
-            .then((doc) => {
-                if (doc.exists) {
-                    buyerAvgBuyPrice = doc.data().avgBuyPrice;
-                    buyerSharesOwned = doc.data().numShares;
-                }
-                return Promise.resolve();
-            }),
+        // buyingUserDoc
+        //     .collection('ownedStocks')
+        //     .doc(stockId)
+        //     .get()
+        //     .then((doc) => {
+        //         if (doc.exists) {
+        //             buyerAvgBuyPrice = doc.data().avgBuyPrice;
+        //             buyerSharesOwned = doc.data().numShares;
+        //         }
+        //         return Promise.resolve();
+        //     }),
     ]).catch((err) => {
         console.error(err);
         return res.status(400).send('Error validating balance.');
@@ -138,7 +138,7 @@ exports.ipoBuyStock = async (req, res) => {
             .doc(stockId)
             .update({
                 float: firestoreRef.FieldValue.increment(numShares),
-                marketCap: (stockData.float + numShares) * stockData.price,
+                // marketCap: (stockData.float + numShares) * stockData.price,
             }),
 
         buyingUserDoc.update({
@@ -183,11 +183,11 @@ exports.ipoBuyStock = async (req, res) => {
                     avgBuyPrice: buyerAvgBuyPrice,
                 });
         });
-    db.collection('stocks')
-        .doc(stockId)
-        .update({
-            volume: firestoreRef.FieldValue.increment(numShares),
-        });
+    // db.collection('stocks')
+    //     .doc(stockId)
+    //     .update({
+    //         volume: firestoreRef.FieldValue.increment(numShares),
+    //     });
     return res.status(201).json({ general: 'Success' });
 };
 
@@ -214,37 +214,44 @@ exports.ipoSellStock = async (req, res) => {
             }),
     ]);
 
-    let sellerAvgBuyPrice = stockData.ipoPrice / 2;
+    let sellerAvgBuyPrice = stockData.ipoPrice;
     let sellerSharesOwned = 0;
 
     await Promise.all([
         validateSharesOwned(req.user.userName, stockId, numShares),
 
-        sellingUserDoc
-            .collection('ownedStocks')
-            .doc(stockId)
-            .get()
-            .then((doc) => {
-                if (doc.exists) {
-                    sellerAvgBuyPrice = doc.data().avgBuyPrice;
-                    sellerSharesOwned = doc.data().numShares;
-                    return Promise.resolve();
-                } else return Promise.reject();
-            }),
+        // sellingUserDoc
+        //     .collection('ownedStocks')
+        //     .doc(stockId)
+        //     .get()
+        //     .then((doc) => {
+        //         if (doc.exists) {
+        //             sellerAvgBuyPrice = doc.data().avgBuyPrice;
+        //             sellerSharesOwned = doc.data().numShares;
+        //             return Promise.resolve();
+        //         } else return Promise.reject();
+        //     }),
     ]).catch((err) => {
         console.error(err);
         return res.status(400).send('Error validating shares owned.');
     });
 
     Promise.all([
+        db
+            .collection('stocks')
+            .doc(stockId)
+            .update({
+                float: firestoreRef.FieldValue.increment(numShares * -1),
+                // marketCap: (stockData.float + numShares) * stockData.price,
+            }),
         sellingUserDoc.update({
             accountBalance: firestoreRef.FieldValue.increment(
-                numShares * (stockData.ipoPrice / 2)
+                numShares * stockData.ipoPrice
             ),
-            totalAccountValue: firestoreRef.FieldValue.increment(
-                numShares * (stockData.ipoPrice / 2) -
-                    numShares * stockData.currPoints
-            ),
+            // totalAccountValue: firestoreRef.FieldValue.increment(
+            //     numShares * (stockData.ipoPrice / 2) -
+            //         numShares * stockData.currPoints
+            // ),
         }),
         // sellingUserDoc.collection('transactionHistory').add({
         //     stockName: stockData.stockName,
@@ -273,14 +280,14 @@ exports.ipoSellStock = async (req, res) => {
             });
     }
 
-    db.collection('stocks')
-        .doc(stockId)
-        .update({
-            ipoPrice: firestoreRef.FieldValue.increment(
-                ((numShares * stockData.ipoPrice) / 1000) * -1
-            ),
-            volume: firestoreRef.FieldValue.increment(numShares),
-        });
+    // db.collection('stocks')
+    //     .doc(stockId)
+    //     .update({
+    //         // ipoPrice: firestoreRef.FieldValue.increment(
+    //         //     ((numShares * stockData.ipoPrice) / 1000) * -1
+    //         // ),
+    //         volume: firestoreRef.FieldValue.increment(numShares),
+    //     });
     return res.status(201).json({ general: 'Success' });
 };
 

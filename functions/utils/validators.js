@@ -47,6 +47,10 @@ exports.validateSignUpData = (newUser) => {
     if (isEmpty(newUser.userName)) {
         errors.userName = 'Username must not be empty';
     }
+    let regExp = new RegExp(/^[a-zA-Z0-9]+$/);
+    if (regExp.test(newUser.userName) == false) {
+        errors.userName = 'Username must be alphanumeric';
+    }
 
     return {
         errors,
