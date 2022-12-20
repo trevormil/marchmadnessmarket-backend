@@ -263,22 +263,22 @@ exports.ipoSellStock = async (req, res) => {
         //         .toLocaleDateString(),
         // }),
     ]);
-    if (sellerSharesOwned - numShares <= 0) {
-        sellingUserDoc.collection('ownedStocks').doc(stockId).delete();
-    } else {
-        sellingUserDoc
-            .collection('ownedStocks')
-            .doc(stockId)
-            .update({
-                numShares: firestoreRef.FieldValue.increment(numShares * -1),
-                stockId: stockId,
-                stockName: stockData.stockName,
-                avgBuyPrice:
-                    (sellerAvgBuyPrice * sellerSharesOwned -
-                        numShares * stockData.ipoPrice) /
-                    (sellerSharesOwned - numShares),
-            });
-    }
+    // if (sellerSharesOwned - numShares <= 0) {
+    //     sellingUserDoc.collection('ownedStocks').doc(stockId).delete();
+    // } else {
+    sellingUserDoc
+        .collection('ownedStocks')
+        .doc(stockId)
+        .update({
+            numShares: firestoreRef.FieldValue.increment(numShares * -1),
+            stockId: stockId,
+            stockName: stockData.stockName,
+            avgBuyPrice:
+                (sellerAvgBuyPrice * sellerSharesOwned -
+                    numShares * stockData.ipoPrice) /
+                (sellerSharesOwned - numShares),
+        });
+    // }
 
     // db.collection('stocks')
     //     .doc(stockId)
