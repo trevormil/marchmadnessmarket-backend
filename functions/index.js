@@ -160,6 +160,10 @@ exports.autoUpdateUsers = functions.pubsub
     .schedule('0 0 * * *')
     .timeZone('America/New_York')
     .onRun(async (context) => {
+        const usernames = [];
+        const userIds = [];
+        const accountValues = [];
+
         const date = firestoreRef.Timestamp.now()
             .toDate()
             .toLocaleDateString()
@@ -169,25 +173,27 @@ exports.autoUpdateUsers = functions.pubsub
         await db
             .collection('stocks')
             .get()
-            .then((querySnapshot) => {
+            .then(async (querySnapshot) => {
                 querySnapshot.docs.forEach((doc) => {
                     stockData.push(doc.data());
                 });
             });
 
-        db.collection('users')
+        await db
+            .collection('users')
             .get()
-            .then((res) => {
-                res.forEach((user) => {
+            .then(async (res) => {
+                res.forEach(async (user) => {
                     const docData = user.data();
                     let totalAccountValue = 0;
 
-                    db.collection('users')
+                    await db
+                        .collection('users')
                         .doc(user.id)
                         .collection('ownedStocks')
                         .get()
-                        .then((resp) => {
-                            resp.forEach((doc) => {
+                        .then(async (resp) => {
+                            resp.forEach(async (doc) => {
                                 const ownedStockData = doc.data();
 
                                 const stockCurrPoints = stockData.find(
@@ -197,23 +203,29 @@ exports.autoUpdateUsers = functions.pubsub
                                 totalAccountValue +=
                                     ownedStockData.numShares * stockCurrPoints;
                             });
-                        })
-                        .then(() => {
-                            db.collection('users').doc(user.id).update({
+
+                            await db.collection('users').doc(user.id).update({
                                 totalAccountValue: totalAccountValue,
                             });
 
-                            // db.collection('users')
-                            //     .doc(user.id)
-                            //     .collection('accountHistory')
-                            //     .doc(dateId)
-                            //     .set({
-                            //         value: totalAccountValue,
-                            //         time: date,
-                            //     });
+                            usernames.push({
+                                username: docData.userName,
+                                accountValue: totalAccountValue,
+                            });
+
+                            await db
+                                .collection('leaderboard')
+                                .doc('leaderboard')
+                                .set({
+                                    leaderboard:
+                                        firestoreRef.FieldValue.arrayUnion(
+                                            ...usernames
+                                        ),
+                                });
                         });
                 });
             });
+
         return null;
     });
 /**
@@ -237,15 +249,16 @@ exports.autoUpdateUserStockPoints = functions.pubsub
         db.collection('users')
             .get()
             .then((res) => {
-                res.forEach((user) => {
+                res.forEach(async (user) => {
                     const docData = user.data();
 
-                    db.collection('users')
+                    await db
+                        .collection('users')
                         .doc(user.id)
                         .collection('ownedStocks')
                         .get()
-                        .then((resp) => {
-                            resp.forEach((doc) => {
+                        .then(async (resp) => {
+                            await resp.forEach(async (doc) => {
                                 const ownedStockData = doc.data();
 
                                 const stockCurrPoints = stockData.find(
@@ -253,7 +266,8 @@ exports.autoUpdateUserStockPoints = functions.pubsub
                                         stock.stockId === ownedStockData.stockId
                                 ).currPoints;
 
-                                db.collection('users')
+                                await db
+                                    .collection('users')
                                     .doc(user.id)
                                     .collection('ownedStocks')
                                     .doc(doc.id)

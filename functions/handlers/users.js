@@ -191,20 +191,25 @@ exports.getUserWatchlist = (req, res) => {
 
 //gets current leaderboard
 exports.getLeaderboard = (req, res) => {
-    db.collection('users')
-        .orderBy('totalAccountValue', 'desc')
+    db.collection('leaderboard')
+        .doc('leaderboard')
         .get()
-        .then((data) => {
-            let leaderboardData = [];
-            data.forEach((user) => {
-                let dataDoc = user.data();
-                leaderboardData.push({
-                    userName: dataDoc.userName,
-                    totalAccountValue: dataDoc.totalAccountValue,
-                    accountBalance: dataDoc.accountBalance,
+        .then((doc) => {
+            const data = doc.data();
+            const ret = [];
+
+            for (let i = 0; i < data.leaderboard.length; i++) {
+                ret.push({
+                    userName: data.leaderboard[i].username,
+                    totalAccountValue: data.leaderboard[i].accountValue,
                 });
+            }
+            //sort by total account value
+            ret.sort((a, b) => {
+                return b.totalAccountValue - a.totalAccountValue;
             });
-            return res.status(201).json(leaderboardData);
+
+            return res.status(201).json(ret);
         })
         .catch((err) => {
             console.error(err);
