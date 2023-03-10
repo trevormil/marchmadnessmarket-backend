@@ -1,6 +1,7 @@
 const functions = require('firebase-functions');
 const { db, firestoreRef } = require('./utils/admin');
 const app = require('express')();
+const axios = require('axios').default;
 const cors = require('cors');
 app.use(cors());
 
@@ -157,13 +158,9 @@ exports.api = functions.https.onRequest(app);
  * Updates stock info, account values, and leaderboards
  */
 exports.autoUpdateUsers = functions.pubsub
-    .schedule('0 0 * * *')
+    .schedule('*/40,10 1-3,12-23 * * *')
     .timeZone('America/New_York')
     .onRun(async (context) => {
-        const usernames = [];
-        const userIds = [];
-        const accountValues = [];
-
         const date = firestoreRef.Timestamp.now()
             .toDate()
             .toLocaleDateString()
@@ -183,7 +180,13 @@ exports.autoUpdateUsers = functions.pubsub
             .collection('users')
             .get()
             .then(async (res) => {
-                res.forEach(async (user) => {
+                let usernames = [];
+                const docs = [];
+                res.forEach((doc) => {
+                    docs.push(doc);
+                });
+
+                for (const user of docs) {
                     const docData = user.data();
                     let totalAccountValue = 0;
 
@@ -193,7 +196,7 @@ exports.autoUpdateUsers = functions.pubsub
                         .collection('ownedStocks')
                         .get()
                         .then(async (resp) => {
-                            resp.forEach(async (doc) => {
+                            resp.forEach((doc) => {
                                 const ownedStockData = doc.data();
 
                                 const stockCurrPoints = stockData.find(
@@ -208,35 +211,51 @@ exports.autoUpdateUsers = functions.pubsub
                                 totalAccountValue: totalAccountValue,
                             });
 
-                            usernames.push({
-                                username: docData.userName,
-                                accountValue: totalAccountValue,
-                            });
-
-                            await db
-                                .collection('leaderboard')
-                                .doc('leaderboard')
-                                .set({
-                                    leaderboard:
-                                        firestoreRef.FieldValue.arrayUnion(
-                                            ...usernames
-                                        ),
-                                });
+                            usernames = [
+                                ...usernames,
+                                {
+                                    username: docData.userName,
+                                    accountValue: totalAccountValue,
+                                },
+                            ];
                         });
-                });
+                }
+
+                await db
+                    .collection('leaderboard')
+                    .doc('leaderboard')
+                    .set({
+                        leaderboard: firestoreRef.FieldValue.arrayUnion(
+                            ...usernames
+                        ),
+                    });
             });
 
         return null;
     });
+
 /**
  * Auto updates necessary information every night at 12AM
  * Updates stock info, account values, and leaderboards
  */
 exports.autoUpdateUserStockPoints = functions.pubsub
-    .schedule('5 0 * * *')
+    .schedule('*/30,0 1-3,12-23 * * *')
     .timeZone('America/New_York')
     .onRun(async (context) => {
         const stockData = [];
+        let handledIds = [];
+        let lastUpdated = '';
+
+        await db
+            .collection('handledIds')
+            .doc('handledIds')
+            .get()
+            .then((res) => {
+                const docData = res.data();
+                handledIds = docData.handledIds;
+                lastUpdated = docData.lastUpdated;
+            });
+
         await db
             .collection('stocks')
             .get()
@@ -246,40 +265,91 @@ exports.autoUpdateUserStockPoints = functions.pubsub
                 });
             });
 
-        db.collection('users')
-            .get()
+        const url =
+            'http://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?limit=365&groups=50';
+        const winners = [];
+        await axios
+            .get(url)
             .then((res) => {
-                res.forEach(async (user) => {
-                    const docData = user.data();
+                return res.data;
+            })
+            .then((response) => {
+                let scores = [];
 
-                    await db
-                        .collection('users')
-                        .doc(user.id)
-                        .collection('ownedStocks')
-                        .get()
-                        .then(async (resp) => {
-                            await resp.forEach(async (doc) => {
-                                const ownedStockData = doc.data();
+                response['events'].forEach((element) => {
+                    let gameInfo = {};
+                    gameInfo.name = element['name'];
+                    gameInfo.shortName = element['shortName'];
+                    gameInfo.score = [];
+                    element['competitions'].forEach((elem) => {
+                        const status = elem.status.type.name;
+                        const id = elem.id;
+                        if (!handledIds.includes(id)) {
+                            if (status === 'STATUS_FINAL') {
+                                //FINAL
+                                elem['competitors'].forEach((e) => {
+                                    const winner = e.winner;
 
-                                const stockCurrPoints = stockData.find(
-                                    (stock) =>
-                                        stock.stockId === ownedStockData.stockId
-                                ).currPoints;
+                                    const displayName =
+                                        e['team']['displayName'];
 
-                                await db
-                                    .collection('users')
-                                    .doc(user.id)
-                                    .collection('ownedStocks')
-                                    .doc(doc.id)
-                                    .update({
-                                        currPoints: stockCurrPoints,
-                                    });
-                            });
-                        });
+                                    const stock = stockData.find(
+                                        (stock) =>
+                                            stock.stockName === displayName
+                                    );
+
+                                    console.log('winner', winner);
+                                    console.log('stock', stock);
+                                    console.log('displayName', displayName);
+                                    if (winner && stock) {
+                                        handledIds.push(id);
+                                        winners.push(stock);
+                                    }
+                                });
+                            }
+                        }
+                    });
                 });
+            })
+            .catch((err) => {
+                console.log(err);
             });
+
+        // let teamArr = [];
+        console.log('winners', winners);
+
+        winners.forEach(async (team) => {
+            // team = team.replace('\r\n', '');
+            // teamArr.push(team);
+
+            console.log('team', team);
+
+            await db
+                .collection('stocks')
+                .doc(team.stockId)
+                .update({
+                    currPoints: firestoreRef.FieldValue.increment(team.seed),
+                })
+                .catch((err) => {
+                    console.error(err);
+                    return Promise.reject();
+                });
+        });
+
+        await db
+            .collection('handledIds')
+            .doc('handledIds')
+            .set({
+                handledIds: handledIds,
+                lastUpdated:
+                    new Date().toLocaleDateString() +
+                    ' at ' +
+                    new Date().toLocaleTimeString(),
+            });
+
         return null;
     });
+
 // /**
 //  * Auto updates necessary information every night at 12AM
 //  * Updates stock info, account values, and leaderboards

@@ -10,7 +10,6 @@ exports.getAllScores = (req, res) => {
             return res.data;
         })
         .then((response) => {
-            console.log(response);
             let scores = [];
 
             response['events'].forEach((element) => {
@@ -20,6 +19,7 @@ exports.getAllScores = (req, res) => {
                 gameInfo.score = [];
                 element['competitions'].forEach((elem) => {
                     elem['competitors'].forEach((e) => {
+                        
                         gameInfo.score.push({
                             score: e['score'],
                             logo: e['team']['logo'],
