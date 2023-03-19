@@ -5,9 +5,9 @@ This repository contains the code used for the API linked with Google Firebase.
 Improvements Noted for 2023
 MMM Feedback
 * View Top Owners of Each Team?
-* Better UI
+* Better UI (Bracket?)
 * Profile Pics
+* TypeScript / Code Cleaning?
 
 
-
-URL: https://tm-market.firebaseapp.com/
+URL: https://marchmadnessmarket.com
