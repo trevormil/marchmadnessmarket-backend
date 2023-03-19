@@ -7,6 +7,28 @@ const {
     validateSharesOwned,
 } = require('../utils/validators');
 
+exports.setWinners = async (req, res) => {
+    await db
+        .collection('stocks')
+        .orderBy('price', 'desc')
+        .get()
+        .then((data) => {
+            let stocks = [];
+            data.forEach(async (doc) => {
+                await db
+                    .collection('stocks')
+                    .doc(doc.id)
+                    .update({
+                        hasLost: doc.data().currPoints == 0,
+                        gamesLeft: 5,
+                    });
+            });
+
+            return res.status(201).json({ message: 'Winners set' });
+        })
+        .catch((err) => console.error(err));
+};
+
 //gets all stocks
 exports.getAllStocks = (req, res) => {
     db.collection('stocks')

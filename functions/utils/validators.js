@@ -47,9 +47,9 @@ exports.validateSignUpData = (newUser) => {
     if (isEmpty(newUser.userName)) {
         errors.userName = 'Username must not be empty';
     }
-    let regExp = new RegExp(/^[a-zA-Z0-9]+$/);
+    let regExp = new RegExp(/^[a-zA-Z0-9]+(?:[ _.-][a-zA-Z0-9]+)*$/);
     if (regExp.test(newUser.userName) == false) {
-        errors.userName = 'Username must be alphanumeric';
+        errors.userName = 'Invalid characters in username';
     }
 
     return {
@@ -103,6 +103,8 @@ exports.reduceStockDetails = (stock) => {
         seed: stock.seed,
         currPoints: 0,
         imageUrl: stock.imageUrl,
+        gamesLeft: 6,
+        hasLost: false,
     };
     return stockDetails;
 };

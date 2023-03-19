@@ -202,6 +202,7 @@ exports.getLeaderboard = (req, res) => {
                 ret.push({
                     userName: data.leaderboard[i].username,
                     totalAccountValue: data.leaderboard[i].accountValue,
+                    maxAccountValue: data.leaderboard[i].maxAccountValue,
                 });
             }
             //sort by total account value

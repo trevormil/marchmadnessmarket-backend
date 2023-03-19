@@ -14,6 +14,7 @@ const {
     ipoBuyStock,
     ipoSellStock,
     updateStockStandings,
+    setWinners,
 } = require('./handlers/stocks');
 
 const {
@@ -91,6 +92,8 @@ app.get('/userStocks/:userId', getOtherUserOwnedStocks); //gets user's portfolio
 // app.get('/accountHistory', FBAuth, getAccountHistory); //gets account value history for a user
 app.get('/leaderboard', getLeaderboard); //gets current leaderboard
 
+app.get('/setWinners', setWinners);
+
 //to implement
 /*
 //app.put("/user", FBAuth, updateUserDetails); //incomplete
@@ -153,12 +156,13 @@ exports.api = functions.https.onRequest(app);
 //         });
 //         return null;
 //     });
+
 /**
  * Auto updates necessary information every night at 12AM
  * Updates stock info, account values, and leaderboards
  */
-exports.autoUpdateUsers = functions.pubsub
-    .schedule('*/40,10 1-3,12-23 * * *')
+exports.autoUpdate = functions.pubsub
+    .schedule('*/10 * * * *')
     .timeZone('America/New_York')
     .onRun(async (context) => {
         const date = firestoreRef.Timestamp.now()
@@ -166,7 +170,8 @@ exports.autoUpdateUsers = functions.pubsub
             .toLocaleDateString()
             .toString();
         const dateId = date.replace('/', '').replace('/', '');
-        const stockData = [];
+        let stockData = [];
+
         await db
             .collection('stocks')
             .get()
@@ -176,73 +181,6 @@ exports.autoUpdateUsers = functions.pubsub
                 });
             });
 
-        await db
-            .collection('users')
-            .get()
-            .then(async (res) => {
-                let usernames = [];
-                const docs = [];
-                res.forEach((doc) => {
-                    docs.push(doc);
-                });
-
-                for (const user of docs) {
-                    const docData = user.data();
-                    let totalAccountValue = 0;
-
-                    await db
-                        .collection('users')
-                        .doc(user.id)
-                        .collection('ownedStocks')
-                        .get()
-                        .then(async (resp) => {
-                            resp.forEach((doc) => {
-                                const ownedStockData = doc.data();
-
-                                const stockCurrPoints = stockData.find(
-                                    (stock) =>
-                                        stock.stockId === ownedStockData.stockId
-                                ).currPoints;
-                                totalAccountValue +=
-                                    ownedStockData.numShares * stockCurrPoints;
-                            });
-
-                            await db.collection('users').doc(user.id).update({
-                                totalAccountValue: totalAccountValue,
-                            });
-
-                            usernames = [
-                                ...usernames,
-                                {
-                                    username: docData.userName,
-                                    accountValue: totalAccountValue,
-                                },
-                            ];
-                        });
-                }
-
-                await db
-                    .collection('leaderboard')
-                    .doc('leaderboard')
-                    .set({
-                        leaderboard: firestoreRef.FieldValue.arrayUnion(
-                            ...usernames
-                        ),
-                    });
-            });
-
-        return null;
-    });
-
-/**
- * Auto updates necessary information every night at 12AM
- * Updates stock info, account values, and leaderboards
- */
-exports.autoUpdateUserStockPoints = functions.pubsub
-    .schedule('*/30,0 1-3,12-23 * * *')
-    .timeZone('America/New_York')
-    .onRun(async (context) => {
-        const stockData = [];
         let handledIds = [];
         let lastUpdated = '';
 
@@ -256,18 +194,10 @@ exports.autoUpdateUserStockPoints = functions.pubsub
                 lastUpdated = docData.lastUpdated;
             });
 
-        await db
-            .collection('stocks')
-            .get()
-            .then((querySnapshot) => {
-                querySnapshot.docs.forEach((doc) => {
-                    stockData.push(doc.data());
-                });
-            });
-
         const url =
             'http://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?limit=365&groups=50';
         const winners = [];
+        const losers = [];
         await axios
             .get(url)
             .then((res) => {
@@ -304,6 +234,8 @@ exports.autoUpdateUserStockPoints = functions.pubsub
                                     if (winner && stock) {
                                         handledIds.push(id);
                                         winners.push(stock);
+                                    } else if (stock) {
+                                        losers.push(stock);
                                     }
                                 });
                             }
@@ -318,17 +250,49 @@ exports.autoUpdateUserStockPoints = functions.pubsub
         // let teamArr = [];
         console.log('winners', winners);
 
+        losers.forEach(async (team) => {
+            // team = team.replace('\r\n', '');
+            // teamArr.push(team);
+
+            console.log('team', team);
+
+            const newStockData = [...stockData];
+            newStockData.find(
+                (stock) => stock.stockId === team.stockId
+            ).hasLost = true;
+            stockData = newStockData;
+
+            await db
+                .collection('stocks')
+                .doc(team.stockId)
+                .update({
+                    hasLost: true,
+                    gamesLeft: firestoreRef.FieldValue.increment(0),
+                })
+                .catch((err) => {
+                    console.error(err);
+                    return Promise.reject();
+                });
+        });
+
         winners.forEach(async (team) => {
             // team = team.replace('\r\n', '');
             // teamArr.push(team);
 
             console.log('team', team);
 
+            const newStockData = [...stockData];
+            newStockData.find(
+                (stock) => stock.stockId === team.stockId
+            ).currPoints += team.seed;
+            stockData = newStockData;
+
             await db
                 .collection('stocks')
                 .doc(team.stockId)
                 .update({
                     currPoints: firestoreRef.FieldValue.increment(team.seed),
+                    gamesLeft: firestoreRef.FieldValue.increment(-1),
                 })
                 .catch((err) => {
                     console.error(err);
@@ -346,6 +310,101 @@ exports.autoUpdateUserStockPoints = functions.pubsub
                     ' at ' +
                     new Date().toLocaleTimeString(),
             });
+
+        // if (winners.length > 0) { TODO: if scalability is an issue, uncomment this
+        await db
+            .collection('users')
+            .get()
+            .then(async (res) => {
+                let usernames = [];
+                const docs = [];
+                res.forEach((doc) => {
+                    docs.push(doc);
+                });
+
+                for (const user of docs) {
+                    const docData = user.data();
+                    let totalAccountValue = 0;
+                    let maxAccountValue = 0;
+
+                    await db
+                        .collection('users')
+                        .doc(user.id)
+                        .collection('ownedStocks')
+                        .get()
+                        .then(async (resp) => {
+                            resp.forEach((doc) => {
+                                const ownedStockData = doc.data();
+
+                                const stockCurrPoints = stockData.find(
+                                    (stock) =>
+                                        stock.stockId === ownedStockData.stockId
+                                ).currPoints;
+                                totalAccountValue +=
+                                    ownedStockData.numShares * stockCurrPoints;
+
+                                //Add current + potential
+                                maxAccountValue +=
+                                    ownedStockData.numShares * stockCurrPoints;
+
+                                const seed = stockData.find(
+                                    (stock) =>
+                                        stock.stockId === ownedStockData.stockId
+                                ).seed;
+
+                                const gamesLeft = stockData.find(
+                                    (stock) =>
+                                        stock.stockId === ownedStockData.stockId
+                                ).gamesLeft;
+
+                                const hasLost = stockData.find(
+                                    (stock) =>
+                                        stock.stockId === ownedStockData.stockId
+                                ).hasLost;
+
+                                if (!hasLost) {
+                                    maxAccountValue +=
+                                        ownedStockData.numShares *
+                                        gamesLeft *
+                                        seed;
+                                }
+                            });
+
+                            if (
+                                docData.totalAccountValue !==
+                                    totalAccountValue ||
+                                docData.maxAccountValue !== maxAccountValue
+                            ) {
+                                await db
+                                    .collection('users')
+                                    .doc(user.id)
+                                    .update({
+                                        totalAccountValue: totalAccountValue,
+                                        maxAccountValue: maxAccountValue,
+                                    });
+                            }
+
+                            usernames = [
+                                ...usernames,
+                                {
+                                    username: docData.userName,
+                                    accountValue: totalAccountValue,
+                                    maxAccountValue: maxAccountValue,
+                                },
+                            ];
+                        });
+                }
+
+                await db
+                    .collection('leaderboard')
+                    .doc('leaderboard')
+                    .set({
+                        leaderboard: firestoreRef.FieldValue.arrayUnion(
+                            ...usernames
+                        ),
+                    });
+            });
+        // }
 
         return null;
     });
