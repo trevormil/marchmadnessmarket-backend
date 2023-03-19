@@ -2,8 +2,7 @@ Fantasy sports and making money are both very popular in the United States, so i
 
 This repository contains the code used for the API linked with Google Firebase.
 
-Improvements Noted for 2023
-MMM Feedback
+Improvements Noted for 2024 MMM Feedback
 * View Top Owners of Each Team?
 * Better UI (Bracket?)
 * Profile Pics
