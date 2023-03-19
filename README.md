@@ -7,6 +7,7 @@ Improvements Noted for 2024 MMM Feedback
 * Better UI (Bracket?)
 * Profile Pics
 * TypeScript / Code Cleaning?
+* Scalability / Efficiency / Performance
 
 
 URL: https://marchmadnessmarket.com
