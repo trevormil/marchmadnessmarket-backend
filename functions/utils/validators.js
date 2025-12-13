@@ -41,12 +41,19 @@ exports.validateSignUpData = (newUser) => {
     if (isEmpty(newUser.password)) {
         errors.password = 'Password must not be empty';
     }
+
+    if (newUser.password.length < 6) {
+        errors.password = 'Password must be at least 6 characters long';
+    }
+
     if (newUser.password !== newUser.confirmPassword) {
         errors.confirmPassword = 'Passwords must match';
     }
+
     if (isEmpty(newUser.userName)) {
         errors.userName = 'Username must not be empty';
     }
+
     let regExp = new RegExp(/^[a-zA-Z0-9]+(?:[ _.-][a-zA-Z0-9]+)*$/);
     if (regExp.test(newUser.userName) == false) {
         errors.userName = 'Invalid characters in username';
