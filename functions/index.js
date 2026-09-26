@@ -94,6 +94,7 @@ exports.autoUpdate = functions.pubsub
             'http://site.api.espn.com/apis/site/v2/sports/basketball/mens-college-basketball/scoreboard?limit=365&groups=50';
         const winners = [];
         const losers = [];
+        const playInRenames = []; // { stockId, newName }
         await axios
             .get(url)
             .then((res) => {
@@ -119,15 +120,38 @@ exports.autoUpdate = functions.pubsub
                                     const displayName =
                                         e['team']['displayName'];
 
-                                    const stock = stockData.find(
+                                    // Try exact match first
+                                    let stock = stockData.find(
                                         (stock) =>
                                             stock.stockName === displayName
                                     );
 
+                                    // If no exact match, try play-in match (stockName contains " / ")
+                                    const isPlayIn = !stock;
+                                    if (!stock) {
+                                        stock = stockData.find(
+                                            (s) =>
+                                                s.stockName.includes(' / ') &&
+                                                s.stockName.includes(displayName)
+                                        );
+                                    }
+
                                     console.log('winner', winner);
                                     console.log('stock', stock);
                                     console.log('displayName', displayName);
-                                    if (winner && stock) {
+                                    console.log('isPlayIn', isPlayIn);
+
+                                    if (isPlayIn && stock) {
+                                        // Play-in game: rename stock to winner, don't score
+                                        if (winner) {
+                                            handledIds.push(id);
+                                            playInRenames.push({
+                                                stockId: stock.stockId,
+                                                newName: displayName,
+                                            });
+                                        }
+                                        // Loser in play-in: do nothing (stock continues with winner)
+                                    } else if (winner && stock) {
                                         handledIds.push(id);
                                         winners.push(stock);
                                     } else if (stock) {
@@ -142,6 +166,27 @@ exports.autoUpdate = functions.pubsub
             .catch((err) => {
                 console.log(err);
             });
+
+        // Handle play-in renames (rename stock to winner's ESPN name)
+        for (const rename of playInRenames) {
+            console.log(`Play-in rename: ${rename.stockId} -> ${rename.newName}`);
+            const newStockData = [...stockData];
+            const matchedStock = newStockData.find(
+                (stock) => stock.stockId === rename.stockId
+            );
+            if (matchedStock) {
+                matchedStock.stockName = rename.newName;
+            }
+            stockData = newStockData;
+
+            await db
+                .collection('stocks')
+                .doc(rename.stockId)
+                .update({ stockName: rename.newName })
+                .catch((err) => {
+                    console.error('Play-in rename error:', err);
+                });
+        }
 
         // let teamArr = [];
         console.log('winners', winners);
@@ -295,9 +340,7 @@ exports.autoUpdate = functions.pubsub
                     .collection('leaderboard')
                     .doc('leaderboard')
                     .set({
-                        leaderboard: firestoreRef.FieldValue.arrayUnion(
-                            ...usernames
-                        ),
+                        leaderboard: usernames,
                     });
             });
         // }

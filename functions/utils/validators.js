@@ -110,7 +110,7 @@ exports.reduceStockDetails = (stock) => {
         seed: stock.seed,
         currPoints: 0,
         imageUrl: stock.imageUrl,
-        gamesLeft: 6,
+        gamesLeft: stock.gamesLeft || 6,
         hasLost: false,
     };
     return stockDetails;
