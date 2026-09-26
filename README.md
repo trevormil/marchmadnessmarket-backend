@@ -11,3 +11,14 @@ Improvements Noted for 2024 MMM Feedback
 
 
 URL: https://marchmadnessmarket.com
+
+## Environment variables
+
+Config is loaded from `functions/.env`, which is gitignored and read by the Firebase CLI at deploy time. Never commit real values.
+
+```sh
+cp functions/.env.example functions/.env   # then fill in values
+firebase deploy --only functions
+```
+
+`API_KEY` must be restricted in Google Cloud (APIs & Services → Credentials) to the Identity Toolkit and Token Service APIs only. An unrestricted key can be abused for paid APIs such as Places.
